@@ -40,16 +40,30 @@ uniqueRecipes = {
     'providers': []
 }
 
+modules = {}
+uniqueModules = {}
 
-def print_recipes():
-    for key, recipe in recipes.iteritems():
-        for recipeItem in recipe:
-            # if not already in unique add to unique
-            if recipeItem not in uniqueRecipes[key]:
-                uniqueRecipes[key].append(recipeItem)
 
-    for key, uRecipe in uniqueRecipes.iteritems():
-        print('\t- %s recipes (total: %s)' % (key, len(uRecipe)))
+def init_module(namespace):
+    modules[namespace] = {
+        'controllers': [],
+        'services': [],
+        'factories': [],
+        'directives': [],
+        'filters': [],
+        'animations': [],
+        'providers': []
+    }
+
+    uniqueModules[namespace] = {
+        'controllers': [],
+        'services': [],
+        'factories': [],
+        'directives': [],
+        'filters': [],
+        'animations': [],
+        'providers': []
+    }
 
 
 def can_traverse(path, ignore_dirs):
@@ -76,14 +90,30 @@ def inspect_js_line(line):
 
 
 def inspect_js(file_path):
+    current_module = None
     js_file = open(file_path, 'r')
+
     for line in js_file:
         jsMeta['lineCount'] += 1
-        inspected_line = inspect_js_line(line)
-        if inspected_line:
-            namespace = parse_recipe_namespace(line, inspected_line)
-            recipes[inspected_line].append(namespace)
-            # print namespace
+        recipe_type = inspect_js_line(line)
+
+        if recipe_type:
+            recipe_namespace = parse_recipe_namespace(line, recipe_type)
+
+            # init if needed
+            if recipe_type is 'modules':
+                module_namespace = recipe_namespace.split('.')
+                module_namespace = module_namespace[0] + '.' + module_namespace[1]
+
+                if module_namespace not in modules:
+                    init_module(module_namespace)
+                current_module = modules[module_namespace]  # set current module - that we will roll on to
+
+            # roll onto global recipes
+            recipes[recipe_type].append(recipe_namespace)
+
+            if recipe_type is not 'modules' and current_module:
+                current_module[recipe_type].append(recipe_namespace)  # append to global modules
 
 
 def traverse(dir_path, ignore_dirs):
@@ -92,19 +122,45 @@ def traverse(dir_path, ignore_dirs):
             # print('--\nroot = ' + root)
 
             # for subdir in subdirs:
-            # print('\t- subdirectory ' + subdir)
+            #   print('\t- subdirectory ' + subdir)
 
             for filename in files:
                 if filename.endswith('.js'):
                     jsMeta['fileCount'] += 1
                     file_path = os.path.join(root, filename)
                     inspect_js(file_path)
-                    # print('\t- file %s' % filename)
                     # print('\t- file %s (full path: %s)' % (filename, file_path))
 
+    print('\n\tHERE IS YOUR INTROSPECTION\n')
     print_recipes()
-    print('-----\njs file count: %s' % jsMeta['fileCount'])
-    print('-----\njs line count: %s' % jsMeta['lineCount'])
+    print_modules()
+    print('\n\tNumber of JavaScript files \t%s' % jsMeta['fileCount'])
+    print('\tLines of JavaScript \t\t%s' % jsMeta['lineCount'])
+    print('\n')
+
+
+def print_recipes():
+    for key, recipe in recipes.iteritems():
+        for recipeItem in recipe:
+            # if not already in unique add to unique
+            if recipeItem not in uniqueRecipes[key]:
+                uniqueRecipes[key].append(recipeItem)
+
+    for key, uRecipe in uniqueRecipes.iteritems():
+        print('\t+ %s recipes \ttotal count: %s' % (key, len(uRecipe)))
+
+
+def print_modules():
+    for key, module in modules.iteritems():
+        for recipeType, recipeValues in module.iteritems():
+            for recipeValue in recipeValues:
+                if recipeValue not in uniqueModules[key][recipeType]:
+                    uniqueModules[key][recipeType].append(recipeValue)
+
+    for key, uModule in uniqueModules.iteritems():
+        print('\n\t %s' % key)
+        for recipeType, recipeValues in uModule.iteritems():
+            print('\t\t> %s \tcount: %s' % (recipeType, len(recipeValues)))
 
 
 def main():
