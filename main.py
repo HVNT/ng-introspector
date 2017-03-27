@@ -78,6 +78,7 @@ def inspect_js_line(line):
 def inspect_js(file_path):
     js_file = open(file_path, 'r')
     for line in js_file:
+        jsMeta['lineCount'] += 1
         inspected_line = inspect_js_line(line)
         if inspected_line:
             namespace = parse_recipe_namespace(line, inspected_line)
@@ -103,6 +104,7 @@ def traverse(dir_path, ignore_dirs):
 
     print_recipes()
     print('-----\njs file count: %s' % jsMeta['fileCount'])
+    print('-----\njs line count: %s' % jsMeta['lineCount'])
 
 
 def main():
