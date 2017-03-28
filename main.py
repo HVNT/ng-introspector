@@ -42,6 +42,7 @@ uniqueRecipes = {
 
 modules = {}
 uniqueModules = {}
+modulesMeta = {}
 
 
 def init_module(namespace):
@@ -54,7 +55,6 @@ def init_module(namespace):
         'animations': [],
         'providers': []
     }
-
     uniqueModules[namespace] = {
         'controllers': [],
         'services': [],
@@ -64,6 +64,7 @@ def init_module(namespace):
         'animations': [],
         'providers': []
     }
+    modulesMeta[namespace] = 0
 
 
 def can_traverse(path, ignore_dirs):
@@ -91,6 +92,7 @@ def inspect_js_line(line):
 
 def inspect_js(file_path):
     current_module = None
+    current_module_namespace = None
     js_file = open(file_path, 'r')
 
     for line in js_file:
@@ -108,12 +110,18 @@ def inspect_js(file_path):
                 if module_namespace not in modules:
                     init_module(module_namespace)
                 current_module = modules[module_namespace]  # set current module - that we will roll on to
+                current_module_namespace = module_namespace
 
             # roll onto global recipes
             recipes[recipe_type].append(recipe_namespace)
 
-            if recipe_type is not 'modules' and current_module:
-                current_module[recipe_type].append(recipe_namespace)  # append to global modules
+            # append to global modules if not module itself
+            if current_module and recipe_type is not 'modules':
+                current_module[recipe_type].append(recipe_namespace)
+
+        # roll up line count to current module
+        if current_module_namespace:
+            modulesMeta[current_module_namespace] += 1
 
 
 def traverse(dir_path, ignore_dirs):
@@ -136,6 +144,7 @@ def traverse(dir_path, ignore_dirs):
     print_modules()
     print('\n\tNumber of JavaScript files \t%s' % jsMeta['fileCount'])
     print('\tLines of JavaScript \t\t%s' % jsMeta['lineCount'])
+    print('\tModule lines of JavaScript')
     print('\n')
 
 
@@ -146,8 +155,9 @@ def print_recipes():
             if recipeItem not in uniqueRecipes[key]:
                 uniqueRecipes[key].append(recipeItem)
 
+    print('\tTotals')
     for key, uRecipe in uniqueRecipes.iteritems():
-        print('\t+ %s recipes \ttotal count: %s' % (key, len(uRecipe)))
+        print('\t    %s\t %s' % (key, len(uRecipe)))
 
 
 def print_modules():
@@ -158,9 +168,10 @@ def print_modules():
                     uniqueModules[key][recipeType].append(recipeValue)
 
     for key, uModule in uniqueModules.iteritems():
-        print('\n\t %s' % key)
+        print('\n\t    %s' % key)
         for recipeType, recipeValues in uModule.iteritems():
-            print('\t\t%s \t: %s' % (recipeType, len(recipeValues)))
+            print('\t\t%s \t%s' % (recipeType, len(recipeValues)))
+        print('\t\tjs line ct. \t%s' % modulesMeta[key])
 
 
 def main():
