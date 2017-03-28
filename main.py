@@ -160,7 +160,7 @@ def print_modules():
     for key, uModule in uniqueModules.iteritems():
         print('\n\t %s' % key)
         for recipeType, recipeValues in uModule.iteritems():
-            print('\t\t> %s \tcount: %s' % (recipeType, len(recipeValues)))
+            print('\t\t%s \t: %s' % (recipeType, len(recipeValues)))
 
 
 def main():
